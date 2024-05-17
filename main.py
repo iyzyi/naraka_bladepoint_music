@@ -152,7 +152,7 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
         if frame_index > ack_index:
             # 相邻两帧可能对应的是同一次按键（比如分别位于切割区域的一左一右）
             if key != last_key or frame_index > last_index + 1:
-                control.keypress(key, 0.2, 0.01, 0.05)
+                control.keypress(key, 0.28, 0.01, 0)
                 print(f'{frame_index}\t{utils.time2str(timestamp)}\t\t{key}\t{num}')
                 ack_index = frame_index
                 last_index = frame_index
