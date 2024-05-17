@@ -151,7 +151,7 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
                 last_index = frame_index
                 skip = True
             last_hash_bottom = hash_bottom
-            H
+
         if skip:
             continue
 
