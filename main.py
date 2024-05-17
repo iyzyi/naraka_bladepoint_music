@@ -50,12 +50,12 @@ def crop_and_ocr(image, args, time_str):
         text = text.strip()
         #print(text)
 
-        if debug and temp_dir != '':
-            temp = text
-            if text == '':
-                temp = 'null'
-            cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}.jpg'), image)
-            cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}_ori.jpg'), image_ori)
+        # if debug and temp_dir != '':
+        #     temp = text
+        #     if text == '':
+        #         temp = 'null'
+        #     cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}.jpg'), image)
+        #     cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}_ori.jpg'), image_ori)
 
     # 计算图片哈希，用于判定目标区域画面无变化/重复插帧的情况
     image_bytes = cv2.imencode('.jpg', image)[1].tobytes()
