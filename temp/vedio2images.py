@@ -39,6 +39,6 @@ def vedio2images(vedio_path, output_dir):
 
 
 if __name__ == '__main__':
-    vedio_path = r'D:\桌面\yjwj_music\videos\guqin-part1.mp4'
+    vedio_path = r'/videos/guqin-part1.mp4'
     output_dir = r'D:\yjwj_music\images\guqin-part1'
     vedio2images(vedio_path, output_dir)

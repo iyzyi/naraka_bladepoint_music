@@ -1,2 +1,4 @@
 *.mp4
 *.pickle
+/.idea/
+/__pycache__/
