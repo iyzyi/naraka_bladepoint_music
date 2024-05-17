@@ -159,6 +159,7 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
 
         # 相邻两帧不要都按下按键，因为第二帧的数字可能会卡在边界导致误识别
         # 比如是同一个按键，第一帧正确识别3，第二帧由于3被卡了一半，识别成1
+        # 如果都响应，则会消耗下一次按键的正确机会，造成恶性循环
         if frame_index <= last_press_index + 1:
             continue
 
