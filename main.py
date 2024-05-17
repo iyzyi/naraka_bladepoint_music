@@ -47,12 +47,12 @@ def crop_and_ocr(image, args, time_str, frame_index):
         text = pytesseract.image_to_string(image, config='--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789')
         text = text.strip()
 
-        if debug and temp_dir != '':
-            temp = text
-            if text == '':
-                temp = 'null'
-            cv2.imwrite(os.path.join(temp_dir, f'{frame_index}_{time_str}_{type}_{temp}.jpg'), image)
-            #cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}_ori.jpg'), image_ori)
+        # if debug and temp_dir != '':
+        #     temp = text
+        #     if text == '':
+        #         temp = 'null'
+        #     cv2.imwrite(os.path.join(temp_dir, f'{frame_index}_{time_str}_{type}_{temp}.jpg'), image)
+        #     #cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}_ori.jpg'), image_ori)
 
     # 计算图片哈希，用于判定目标区域画面无变化/重复插帧的情况
     image_bytes = cv2.imencode('.jpg', image)[1].tobytes()
@@ -109,7 +109,7 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
         if non_null == 0:
             continue
         if non_null != 1:
-            print(f'[ERROR] 多行均识别出非零值: {result}')
+            print(f'[WARNING] 多行均识别出非零值: {result}')
             continue
 
         num_top, hash_top = res_top
@@ -121,7 +121,7 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
 
         if num_top != '':
             if int(num_top) not in map_top.keys():
-                print(f'[ERROR] map_top中没有对应键: {num_top}')
+                print(f'[WARNING] map_top中没有对应键: {num_top}')
                 continue
             key = map_top[int(num_top)]
             num = num_top
@@ -131,7 +131,7 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
             last_hash_top = hash_top
         elif num_middle != '':
             if int(num_middle) not in map_middle.keys():
-                print(f'[ERROR] map_middle没有对应键: {num_middle}')
+                print(f'[WARNING] map_middle没有对应键: {num_middle}')
                 continue
             key = map_middle[int(num_middle)]
             num = num_middle
@@ -141,7 +141,7 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
             last_hash_middle = hash_middle
         else:
             if int(num_bottom) not in map_bottom.keys():
-                print(f'[ERROR] map_bottom中没有对应键: {num_bottom}')
+                print(f'[WARNING] map_bottom中没有对应键: {num_bottom}')
                 continue
             key = map_bottom[int(num_bottom)]
             num = num_bottom
