@@ -1,6 +1,4 @@
-import os, time, shutil, datetime, hashlib, threading
-import queue
-
+import os, time, shutil, datetime, hashlib, threading, queue
 import cv2
 import numpy as np
 import pyautogui
@@ -17,7 +15,7 @@ result_queue = queue.Queue()
 
 
 # 裁剪图像、OCR
-def crop_and_ocr(image, args, time_str):
+def crop_and_ocr(image, args, time_str, frame_index):
     x, y, width, height, type = args
 
     # 裁剪特定区域
@@ -42,20 +40,19 @@ def crop_and_ocr(image, args, time_str):
 
     text = ''
     # OCR速度太慢了，通过这一条件屏蔽大部分无效图像
-    if white_ratio < 0.95:
+    if 0.5 < white_ratio < 0.95:
         # --psm 7 单行识别
         # --oem 3 使用 LSTM OCR 引擎
         # -c tessedit_char_whitelist=0123456789 只识别数字字符
         text = pytesseract.image_to_string(image, config='--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789')
         text = text.strip()
-        #print(text)
 
-        # if debug and temp_dir != '':
-        #     temp = text
-        #     if text == '':
-        #         temp = 'null'
-        #     cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}.jpg'), image)
-        #     cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}_ori.jpg'), image_ori)
+        if debug and temp_dir != '':
+            temp = text
+            if text == '':
+                temp = 'null'
+            cv2.imwrite(os.path.join(temp_dir, f'{frame_index}_{time_str}_{type}_{temp}.jpg'), image)
+            #cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}_ori.jpg'), image_ori)
 
     # 计算图片哈希，用于判定目标区域画面无变化/重复插帧的情况
     image_bytes = cv2.imencode('.jpg', image)[1].tobytes()
@@ -85,9 +82,9 @@ def recognize_thread_func(args_top, args_middle, args_bottom):
     while True:
         frame_index, timestamp, image = images_queue.get()
         time_str = utils.time2str(timestamp)
-        res_top = crop_and_ocr(image, args_top, time_str)
-        res_middle = crop_and_ocr(image, args_middle, time_str)
-        res_bottom = crop_and_ocr(image, args_bottom, time_str)
+        res_top = crop_and_ocr(image, args_top, time_str, frame_index)
+        res_middle = crop_and_ocr(image, args_middle, time_str, frame_index)
+        res_bottom = crop_and_ocr(image, args_bottom, time_str, frame_index)
         result_queue.put((frame_index, timestamp, res_top, res_middle, res_bottom))
 
 
@@ -95,6 +92,7 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
     global result_list
     ack_index = -1
     last_index = 0
+    last_press_index = 0
     last_key = ''
     last_hash_top = ''
     last_hash_middle = ''
@@ -156,14 +154,22 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
             continue
 
         # 由于是多线程识别，所以如果当前按键位于已经确认的最新按键之前，则忽略
-        if frame_index > ack_index:
-            # 相邻两帧可能对应的是同一次按键（比如分别位于切割区域的一左一右）
-            if key != last_key or frame_index > last_index + 1:
-                control.keypress(key, 0.28, 0.01, 0)
-                print(f'{frame_index}\t{utils.time2str(timestamp)}\t\t{key}\t{num}')
-                ack_index = frame_index
-                last_index = frame_index
-                last_key = key
+        if frame_index <= ack_index:
+            continue
+
+        # 相邻两帧不要都按下按键，因为第二帧的数字可能会卡在边界导致误识别
+        # 比如是同一个按键，第一帧正确识别3，第二帧由于3被卡了一半，识别成1
+        if frame_index <= last_press_index + 1:
+            continue
+
+        # 相邻两帧可能对应的是同一次按键（比如分别位于切割区域的一左一右）
+        if key != last_key or frame_index > last_index + 1:
+            control.keypress(key, 0.28, 0.01, 0)
+            print(f'{frame_index:08d}\t{utils.time2str(timestamp)}\t\t{key}\t{num}')
+            ack_index = frame_index
+            last_index = frame_index
+            last_press_index = frame_index
+            last_key = key
 
 
 

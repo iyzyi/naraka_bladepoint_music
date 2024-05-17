@@ -49,4 +49,3 @@ if __name__ == "__main__":
         result = is_mouse_focus_on(target_pid)
         print(result)
         time.sleep(1)
-
