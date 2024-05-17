@@ -120,31 +120,38 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
 
         num = 0
         skip = False
-        try:
-            if num_top != '':
-                key = map_top[int(num_top)]
-                num = num_top
-                if last_hash_top == hash_top:
-                    last_index = frame_index
-                    skip = True
-                last_hash_top = hash_top
-            elif num_middle != '':
-                key = map_middle[int(num_middle)]
-                num = num_middle
-                if last_hash_middle == hash_middle:
-                    last_index = frame_index
-                    skip = True
-                last_hash_middle = hash_middle
-            else:
-                key = map_bottom[int(num_bottom)]
-                num = num_bottom
-                if last_hash_bottom == hash_bottom:
-                    last_index = frame_index
-                    skip = True
-                last_hash_bottom = hash_bottom
-        except KeyError as e:
-            print(f'[ERROR] MAP中没有对应键: {result}')
-            continue
+
+        if num_top != '':
+            if int(num_top) not in map_top.keys():
+                print(f'[ERROR] map_top中没有对应键: {num_top}')
+                continue
+            key = map_top[int(num_top)]
+            num = num_top
+            if last_hash_top == hash_top:
+                last_index = frame_index
+                skip = True
+            last_hash_top = hash_top
+        elif num_middle != '':
+            if int(num_middle) not in map_middle.keys():
+                print(f'[ERROR] map_middle没有对应键: {num_middle}')
+                continue
+            key = map_middle[int(num_middle)]
+            num = num_middle
+            if last_hash_middle == hash_middle:
+                last_index = frame_index
+                skip = True
+            last_hash_middle = hash_middle
+        else:
+            if int(num_bottom) not in map_bottom.keys():
+                print(f'[ERROR] map_bottom中没有对应键: {num_bottom}')
+                continue
+            key = map_bottom[int(num_bottom)]
+            num = num_bottom
+            if last_hash_bottom == hash_bottom:
+                last_index = frame_index
+                skip = True
+            last_hash_bottom = hash_bottom
+            H
         if skip:
             continue
 
