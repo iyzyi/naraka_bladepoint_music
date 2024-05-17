@@ -1,4 +1,5 @@
 import os, time, shutil, datetime, hashlib, threading
+import queue
 
 import cv2
 import numpy as np
@@ -8,12 +9,11 @@ import control, utils
 
 debug = True
 temp_dir = r'D:\temp'
+shutil.rmtree(temp_dir)
+os.makedirs(temp_dir)
 
-images_list = []    # (frame_index, timestamp, image)
-images_lock = threading.Lock()
-result_list = []    # (frame_index, timestamp, res_top, res_middle, res_bottom)
-                    # res_xxxx: (text, image_hash)
-result_lock = threading.Lock()
+images_queue = queue.Queue()
+result_queue = queue.Queue()
 
 
 # 裁剪图像、OCR
@@ -50,12 +50,12 @@ def crop_and_ocr(image, args, time_str):
         text = text.strip()
         #print(text)
 
-    if debug and temp_dir != '':
-        temp = text
-        if text == '':
-            temp = 'null'wgg
-        cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}.jpg'), image)
-        cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}_ori.jpg'), image_ori)
+        if debug and temp_dir != '':
+            temp = text
+            if text == '':
+                temp = 'null'
+            cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}.jpg'), image)
+            cv2.imwrite(os.path.join(temp_dir, f'{time_str}_{type}_{temp}_ori.jpg'), image_ori)
 
     # 计算图片哈希，用于判定目标区域画面无变化/重复插帧的情况
     image_bytes = cv2.imencode('.jpg', image)[1].tobytes()
@@ -72,10 +72,7 @@ def screenshot_thread_func(fps):
         begin = time.time()
         screenshot = pyautogui.screenshot()
         image = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
-        images_lock.acquire()
-        images_list.append((frame_index, begin, image))
-        images_lock.release()
-        print('images list length:', len(images_list))
+        images_queue.put((frame_index, begin, image))
         frame_index += 1
         end = time.time()
         if (end - begin) < frame_interval:
@@ -86,40 +83,25 @@ def recognize_thread_func(args_top, args_middle, args_bottom):
     global images_list
 
     while True:
-        images_lock.acquire()
-        if len(images_list) > 0:
-            frame_index, timestamp, image = images_list[0]
-            images_list = images_list[1:]
-            images_lock.release()
-        else:
-            images_lock.release()
-            continue
-
+        frame_index, timestamp, image = images_queue.get()
         time_str = utils.time2str(timestamp)
         res_top = crop_and_ocr(image, args_top, time_str)
         res_middle = crop_and_ocr(image, args_middle, time_str)
         res_bottom = crop_and_ocr(image, args_bottom, time_str)
-
-        result_lock.acquire()
-        result_list.append((frame_index, timestamp, res_top, res_middle, res_bottom))
-        result_lock.release()
+        result_queue.put((frame_index, timestamp, res_top, res_middle, res_bottom))
 
 
 def keypress_thread_func(map_top, map_middle, map_bottom):
     global result_list
-    ack = -1
+    ack_index = -1
+    last_index = 0
+    last_key = ''
+    last_hash_top = ''
+    last_hash_middle = ''
+    last_hash_bottom = ''
 
     while True:
-        result_lock.acquire()
-        if len(result_list) > 0:
-            print(len(result_list))
-            result = result_list[0]
-            result_list = result_list[1:]
-            result_lock.release()
-        else:
-            result_lock.release()
-            continue
-
+        result = result_queue.get()
         frame_index, timestamp, res_top, res_middle, res_bottom = result
 
         non_null = 0
@@ -137,47 +119,45 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
         num_bottom, hash_bottom = res_bottom
 
         num = 0
-        #skip = False
+        skip = False
         try:
             if num_top != '':
                 key = map_top[int(num_top)]
                 num = num_top
-                # if last_hash_top == hash_top:
-                #     last_index = frame_index
-                #     skip = True
-                # last_hash_top = hash_top
+                if last_hash_top == hash_top:
+                    last_index = frame_index
+                    skip = True
+                last_hash_top = hash_top
             elif num_middle != '':
                 key = map_middle[int(num_middle)]
                 num = num_middle
-                # if last_hash_middle == hash_middle:
-                #     last_index = frame_index
-                #     skip = True
-                # last_hash_middle = hash_middle
+                if last_hash_middle == hash_middle:
+                    last_index = frame_index
+                    skip = True
+                last_hash_middle = hash_middle
             else:
                 key = map_bottom[int(num_bottom)]
                 num = num_bottom
-                # if last_hash_bottom == hash_bottom:
-                #     last_index = frame_index
-                #     skip = True
-                # last_hash_bottom = hash_bottom
+                if last_hash_bottom == hash_bottom:
+                    last_index = frame_index
+                    skip = True
+                last_hash_bottom = hash_bottom
         except KeyError as e:
             print(f'[ERROR] MAP中没有对应键: {result}')
             continue
-        # if skip:
-        #     continue
+        if skip:
+            continue
 
-        # # 相邻两帧可能对应的是同一次按键（分别位于切割区域的一左一右）
-        # if key != last_key or index > last_index + 1:
-        #     control.key_press(key)
-        #     times = f'{int((time.time() - begin) * 1000)}ms'
-        #     print(times, index, key, num, last_index, last_key)
-        #     last_key = key
-        #     last_index = index
+        # 由于是多线程识别，所以如果当前按键位于已经确认的最新按键之前，则忽略
+        if frame_index > ack_index:
+            # 相邻两帧可能对应的是同一次按键（比如分别位于切割区域的一左一右）
+            if key != last_key or frame_index > last_index + 1:
+                control.keypress(key, 0.2, 0.01, 0.05)
+                print(f'{frame_index}\t{utils.time2str(timestamp)}\t\t{key}\t{num}')
+                ack_index = frame_index
+                last_index = frame_index
+                last_key = key
 
-        if frame_index > ack:
-            control.keypress(key)
-            print(frame_index, timestamp, key, num)
-            ack = frame_index
 
 
 def main(fps, recognize_thread_num, args_top, args_middle, args_bottom, map_top, map_middle, map_bottom):
@@ -204,7 +184,6 @@ def main(fps, recognize_thread_num, args_top, args_middle, args_bottom, map_top,
     for recognize_thread in recognize_threads:
         recognize_thread.join()
     keypress_thread.start()
-
 
 
 
