@@ -6,6 +6,7 @@ import pytesseract
 import utils
 import control
 import param
+import param_通用
 
 
 debug = True
@@ -66,8 +67,8 @@ def crop_and_ocr(image, args, time_str, frame_index):
     return (text, image_hash)
 
 
-def screenshot_thread_func(fps):
-    frame_interval = 1.0 / fps
+def screenshot_thread_func():
+    frame_interval = 1.0 / param.fps
     frame_index = 0
 
     while is_running:
@@ -81,7 +82,7 @@ def screenshot_thread_func(fps):
             time.sleep(frame_interval - (end - begin))
 
 
-def recognize_thread_func(args_top, args_middle, args_bottom):
+def recognize_thread_func():
     global images_list
 
     while is_running:
@@ -90,13 +91,13 @@ def recognize_thread_func(args_top, args_middle, args_bottom):
         except queue.Empty:
             continue
         time_str = utils.time2str(timestamp)
-        res_top = crop_and_ocr(image, args_top, time_str, frame_index)
-        res_middle = crop_and_ocr(image, args_middle, time_str, frame_index)
-        res_bottom = crop_and_ocr(image, args_bottom, time_str, frame_index)
+        res_top = crop_and_ocr(image, param_通用.args_top, time_str, frame_index)
+        res_middle = crop_and_ocr(image, param_通用.args_middle, time_str, frame_index)
+        res_bottom = crop_and_ocr(image, param_通用.args_bottom, time_str, frame_index)
         result_queue.put((frame_index, timestamp, res_top, res_middle, res_bottom))
 
 
-def keypress_thread_func(ctrl, map_top, map_middle, map_bottom):
+def keypress_thread_func(ctrl):
     global result_list
     ack_index = -1
     last_index = 0
@@ -131,30 +132,30 @@ def keypress_thread_func(ctrl, map_top, map_middle, map_bottom):
         skip = False
 
         if num_top != '':
-            if int(num_top) not in map_top.keys():
+            if int(num_top) not in param_通用.map_top.keys():
                 print(f'[WARNING] map_top中没有对应键: {num_top}')
                 continue
-            key = map_top[int(num_top)]
+            key = param_通用.map_top[int(num_top)]
             num = num_top
             if last_hash_top == hash_top:
                 last_index = frame_index
                 skip = True
             last_hash_top = hash_top
         elif num_middle != '':
-            if int(num_middle) not in map_middle.keys():
+            if int(num_middle) not in param_通用.map_middle.keys():
                 print(f'[WARNING] map_middle没有对应键: {num_middle}')
                 continue
-            key = map_middle[int(num_middle)]
+            key = param_通用.map_middle[int(num_middle)]
             num = num_middle
             if last_hash_middle == hash_middle:
                 last_index = frame_index
                 skip = True
             last_hash_middle = hash_middle
         else:
-            if int(num_bottom) not in map_bottom.keys():
+            if int(num_bottom) not in param_通用.map_bottom.keys():
                 print(f'[WARNING] map_bottom中没有对应键: {num_bottom}')
                 continue
-            key = map_bottom[int(num_bottom)]
+            key = param_通用.map_bottom[int(num_bottom)]
             num = num_bottom
             if last_hash_bottom == hash_bottom:
                 last_index = frame_index
@@ -200,20 +201,20 @@ def start(ctrl):
     is_running = True
 
     # 截图线程
-    screenshot_thread = threading.Thread(target=screenshot_thread_func, args=(param.fps,))
+    screenshot_thread = threading.Thread(target=screenshot_thread_func)
     screenshot_thread.daemon = True
     screenshot_thread.start()
 
     # 识别线程
     recognize_threads = []
     for i in range(8):
-        recognize_thread = threading.Thread(target=recognize_thread_func, args=(param.args_top, param.args_middle, param.args_bottom,))
+        recognize_thread = threading.Thread(target=recognize_thread_func)
         recognize_thread.daemon = True
         recognize_threads.append(recognize_thread)
         recognize_thread.start()
 
     # 按键线程
-    keypress_thread = threading.Thread(target=keypress_thread_func, args=(ctrl, param.map_top, param.map_middle, param.map_bottom,))
+    keypress_thread = threading.Thread(target=keypress_thread_func, args=(ctrl,))
     keypress_thread.daemon = True
     keypress_thread.start()
 
