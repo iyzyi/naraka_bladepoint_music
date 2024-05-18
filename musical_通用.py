@@ -1,9 +1,13 @@
-import os, time, shutil, datetime, hashlib, threading, queue
+import asyncio
+import os, time, shutil, hashlib, threading, queue
 import cv2
 import numpy as np
 import pyautogui
 import pytesseract
-import control, utils
+import utils
+import control
+import param
+
 
 debug = True
 temp_dir = r'D:\temp'
@@ -12,6 +16,8 @@ os.makedirs(temp_dir)
 
 images_queue = queue.Queue()
 result_queue = queue.Queue()
+is_running = False
+queue_get_timeout = 1
 
 
 # 裁剪图像、OCR
@@ -65,7 +71,7 @@ def screenshot_thread_func(fps):
     frame_interval = 1.0 / fps
     frame_index = 0
 
-    while True:
+    while is_running:
         begin = time.time()
         screenshot = pyautogui.screenshot()
         image = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
@@ -79,8 +85,11 @@ def screenshot_thread_func(fps):
 def recognize_thread_func(args_top, args_middle, args_bottom):
     global images_list
 
-    while True:
-        frame_index, timestamp, image = images_queue.get()
+    while is_running:
+        try:
+            frame_index, timestamp, image = images_queue.get(timeout=queue_get_timeout)
+        except queue.Empty:
+            continue
         time_str = utils.time2str(timestamp)
         res_top = crop_and_ocr(image, args_top, time_str, frame_index)
         res_middle = crop_and_ocr(image, args_middle, time_str, frame_index)
@@ -88,7 +97,7 @@ def recognize_thread_func(args_top, args_middle, args_bottom):
         result_queue.put((frame_index, timestamp, res_top, res_middle, res_bottom))
 
 
-def keypress_thread_func(map_top, map_middle, map_bottom):
+async def keypress_async_func(map_top, map_middle, map_bottom):
     global result_list
     ack_index = -1
     last_index = 0
@@ -98,8 +107,11 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
     last_hash_middle = ''
     last_hash_bottom = ''
 
-    while True:
-        result = result_queue.get()
+    while is_running:
+        try:
+            result = result_queue.get(timeout=queue_get_timeout)
+        except queue.Empty:
+            continue
         frame_index, timestamp, res_top, res_middle, res_bottom = result
 
         non_null = 0
@@ -165,31 +177,45 @@ def keypress_thread_func(map_top, map_middle, map_bottom):
 
         # 相邻两帧可能对应的是同一次按键（比如分别位于切割区域的一左一右）
         if key != last_key or frame_index > last_index + 1:
-            control.keypress(key, 0.28, 0.01, 0)
+            @utils.new_thread
+            async def custom_keypress(key, delay1, delay2):
+                await control.delay(delay1)
+                await control.keypress(key, delay2)
+            await custom_keypress(key, 0.28, 0.01)
             print(f'{frame_index:08d}\t{utils.time2str(timestamp)}\t\t{key}\t{num}')
+
             ack_index = frame_index
             last_index = frame_index
             last_press_index = frame_index
             last_key = key
 
 
+def keypress_thread_func(map_top, map_middle, map_bottom):
+    asyncio.run(keypress_async_func(map_top, map_middle, map_bottom))
 
-def main(fps, recognize_thread_num, args_top, args_middle, args_bottom, map_top, map_middle, map_bottom):
+
+def start():
+    global is_running
+    if is_running:
+        print('[ERROR] 脚本不支持并发运行')
+        return
+    is_running = True
+
     # 截图线程
-    screenshot_thread = threading.Thread(target=screenshot_thread_func, args=(fps,))
+    screenshot_thread = threading.Thread(target=screenshot_thread_func, args=(param.fps,))
     screenshot_thread.daemon = True
     screenshot_thread.start()
 
     # 识别线程
     recognize_threads = []
-    for i in range(recognize_thread_num):
-        recognize_thread = threading.Thread(target=recognize_thread_func, args=(args_top, args_middle, args_bottom,))
+    for i in range(8):
+        recognize_thread = threading.Thread(target=recognize_thread_func, args=(param.args_top, param.args_middle, param.args_bottom,))
         recognize_thread.daemon = True
         recognize_threads.append(recognize_thread)
         recognize_thread.start()
 
     # 按键线程
-    keypress_thread = threading.Thread(target=keypress_thread_func, args=(map_top, map_middle, map_bottom,))
+    keypress_thread = threading.Thread(target=keypress_thread_func, args=(param.map_top, param.map_middle, param.map_bottom,))
     keypress_thread.daemon = True
     keypress_thread.start()
 
@@ -197,23 +223,13 @@ def main(fps, recognize_thread_num, args_top, args_middle, args_bottom, map_top,
     screenshot_thread.join()
     for recognize_thread in recognize_threads:
         recognize_thread.join()
-    keypress_thread.start()
+    keypress_thread.join()
 
+
+def stop():
+    global is_running
+    is_running = False
 
 
 if __name__ == '__main__':
-    fps = 20
-    recognize_thread_num = 8
-
-    x = 538 + 120
-    width = 28
-    height = 23
-    args_top =  (x, 145, width, height, 'top')
-    args_middle = (x, 240, width, height, 'middle')
-    args_bottom = (x, 335, width, height, 'bottom')
-
-    map_top = {1: 'Q', 2: 'W', 3: 'E', 4: 'R', 5: 'T', 6: 'Y', 7: 'U'}
-    map_middle = {1: 'A', 2: 'S', 3: 'D', 4: 'F', 5: 'G', 6: 'H', 7: 'J'}
-    map_bottom = {1: 'Z', 2: 'X', 3: 'C', 4: 'V', 5: 'B', 6: 'N', 7: 'M'}
-
-    main(fps, recognize_thread_num, args_top, args_middle, args_bottom, map_top, map_middle, map_bottom)
+    start()
