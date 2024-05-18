@@ -172,8 +172,9 @@ def keypress_thread_func(ctrl):
         # 相邻两帧不要都按下按键，因为第二帧的数字可能会卡在边界导致误识别
         # 比如是同一个按键，第一帧正确识别3，第二帧由于3被卡了一半，识别成1
         # 如果都响应，则会消耗下一次按键的正确机会，造成恶性循环
-        if frame_index <= last_press_index + 1:
-            continue
+        # PS: 锣的按键间隔较大，所以这里改为3试试
+        if frame_index <= last_press_index + 3:#1:
+            continued
 
         # 相邻两帧可能对应的是同一次按键（比如分别位于切割区域的一左一右）
         if key != last_key or frame_index > last_index + 1:
