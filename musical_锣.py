@@ -174,7 +174,7 @@ def keypress_thread_func(ctrl):
         # 如果都响应，则会消耗下一次按键的正确机会，造成恶性循环
         # PS: 锣的按键间隔较大，所以这里改为3试试
         if frame_index <= last_press_index + 3:#1:
-            continued
+            continue
 
         # 相邻两帧可能对应的是同一次按键（比如分别位于切割区域的一左一右）
         if key != last_key or frame_index > last_index + 1:
