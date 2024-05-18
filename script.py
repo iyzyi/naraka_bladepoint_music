@@ -72,12 +72,12 @@ def script_body(ctrl, type):
 
     while is_running:
         # 长按E 开始演奏 (可能会有bug，多重复几次吧)
-        for i in range(8):
+        for i in range(12):
             c.keypress('E', 2)
         #c.delay(4)
 
         # 演奏几次
-        times = 1
+        times = 2
         for i in range(times):
             # 打开 曲艺手册
             c.moveto(1818, 241)
@@ -88,7 +88,7 @@ def script_body(ctrl, type):
             # 曲艺手册 翻到最后
             c.moveto(996, 710)
             c.delay(0.5)
-            c.mouse_wheel(-800)
+            c.mouse_wheel(-3000)
             c.delay(1)
 
             # 选择 《专家-天选》
@@ -105,18 +105,24 @@ def script_body(ctrl, type):
             utils.new_thread(param.type_handles[type]['start'])(c)
             # 乐曲时长
             c.delay(3 * 60 + 24)
-            c.delay(10)
+            c.delay(12)
 
-            # 确认获取熟练度
+            # 确认获取熟练度窗口，有时会出两次
             c.keypress(' ')
-            c.delay(1)
+            c.delay(2)
+            c.keypress(' ')
+            c.delay(2)
 
         # 按esc起身
         c.keypress('\x1b')
+        c.delay(3)
+        # 确认获取熟练度窗口，有时这里也会出现
+        c.keypress(' ')
         c.delay(5)
 
-        # 小走一步 (为了屏幕中显示 E 键)
-        c.keypress('W')
+        # 小跳一下 (为了屏幕中显示 E 键)
+        c.keypress(' ')
+        c.delay(0.5)
 
 
 

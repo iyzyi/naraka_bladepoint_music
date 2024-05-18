@@ -223,6 +223,8 @@ def start(ctrl):
         recognize_thread.join()
     keypress_thread.join()
 
+    is_running = False
+
 
 def stop():
     global is_running

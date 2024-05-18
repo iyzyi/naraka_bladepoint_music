@@ -58,20 +58,22 @@ class Control:
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
 
     @on_mouse_focus
-    def mouse_wheel(self, pixel):
+    def mouse_wheel(self, delta):
         """
             滚动鼠标滚轮
             Args:
-                pixel: 滚动像素量。正数表示向上滚动，负数表示向下滚动。
+                delta: 滚动量(不等效于像素数)。正数表示向上滚动，负数表示向下滚动。
         """
-        win32api.mouse_event(win32con.MOUSEEVENTF_WHEEL, 0, 0, pixel, 0)
+        win32api.mouse_event(win32con.MOUSEEVENTF_WHEEL, 0, 0, delta, 0)
 
 
 if __name__ == '__main__':
     import param
     c = Control(param.process_name)
-    c.keypress("E")
+    # c.keypress("E")
+    # c.delay(1)
+    # c.interrupt()
+    # c.keypress("F")
+    # c.delay(3600)
+    c.mouse_wheel(120)
     c.delay(1)
-    c.interrupt()
-    c.keypress("F")
-    c.delay(3600)
