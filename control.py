@@ -38,11 +38,14 @@ class Control:
 
     @on_mouse_focus
     def keypress(self, key, delay_seconds=0.01):
-        # key实际上应为VK_CODE，这里我暂时用不到，就简化为ascii了。
+        # key实际上应为VK_CODE
         # https://learn.microsoft.com/zh-cn/windows/win32/inputdev/virtual-key-codes
-        win32api.keybd_event(ord(key), win32api.MapVirtualKey(ord(key), 0), 0, 0)
+        assert isinstance(key, int) or isinstance(key, str)
+        if isinstance(key, str):
+            key = ord(key)
+        win32api.keybd_event(key, win32api.MapVirtualKey(key, 0), 0, 0)
         self.delay(delay_seconds)
-        win32api.keybd_event(ord(key), win32api.MapVirtualKey(ord(key), 0), win32con.KEYEVENTF_KEYUP, 0)
+        win32api.keybd_event(key, win32api.MapVirtualKey(key, 0), win32con.KEYEVENTF_KEYUP, 0)
 
     @on_mouse_focus
     def moveto(self, x, y):

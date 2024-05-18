@@ -70,42 +70,53 @@ def stop_script():
 def script_body(ctrl, type):
     c = ctrl
 
-    # 长按E 开始演奏
-    c.keypress('E', 1.6)
-    c.delay(4)
+    while is_running:
+        # 长按E 开始演奏 (可能会有bug，多重复几次吧)
+        for i in range(8):
+            c.keypress('E', 2)
+        #c.delay(4)
 
-    # 演奏几次
-    times = 2
-    for i in range(times):
-        # 打开 曲艺手册
-        c.moveto(1818, 241)
-        c.delay(0.1)
-        c.left_click()
-        c.delay(1)
+        # 演奏几次
+        times = 1
+        for i in range(times):
+            # 打开 曲艺手册
+            c.moveto(1818, 241)
+            c.delay(0.1)
+            c.left_click()
+            c.delay(1)
 
-        # 曲艺手册 翻到最后
-        c.moveto(996, 710)
-        c.delay(0.1)
-        c.mouse_wheel(-300)
-        c.delay(0.5)
+            # 曲艺手册 翻到最后
+            c.moveto(996, 710)
+            c.delay(0.5)
+            c.mouse_wheel(-800)
+            c.delay(1)
 
-        # 选择 《专家-天选》
-        c.moveto(996, 710)
-        c.delay(0.1)
-        c.left_click()
+            # 选择 《专家-天选》
+            c.moveto(996, 710)
+            c.delay(0.1)
+            c.left_click()
 
-        # 点击 开始演奏
-        c.moveto(1689, 943)
-        c.delay(0.1)
-        c.left_click()
+            # 点击 开始演奏
+            c.moveto(1689, 943)
+            c.delay(0.1)
+            c.left_click()
 
-        # 演奏 并 等待演奏完成
-        utils.new_thread(param.type_handles[type]['start'])(c)
-        c.delay(3 * 60 + 24)
+            # 演奏 并 等待演奏完成
+            utils.new_thread(param.type_handles[type]['start'])(c)
+            # 乐曲时长
+            c.delay(3 * 60 + 24)
+            c.delay(10)
 
-        # 确认获取熟练度
-        c.delay(3)
-        c.keypress(' ')
+            # 确认获取熟练度
+            c.keypress(' ')
+            c.delay(1)
+
+        # 按esc起身
+        c.keypress('\x1b')
+        c.delay(5)
+
+        # 小走一步 (为了屏幕中显示 E 键)
+        c.keypress('W')
 
 
 
