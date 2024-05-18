@@ -1,4 +1,3 @@
-import asyncio
 import os, time, shutil, hashlib, threading, queue
 import cv2
 import numpy as np
@@ -97,7 +96,7 @@ def recognize_thread_func(args_top, args_middle, args_bottom):
         result_queue.put((frame_index, timestamp, res_top, res_middle, res_bottom))
 
 
-async def keypress_async_func(map_top, map_middle, map_bottom):
+def keypress_thread_func(ctrl, map_top, map_middle, map_bottom):
     global result_list
     ack_index = -1
     last_index = 0
@@ -178,10 +177,13 @@ async def keypress_async_func(map_top, map_middle, map_bottom):
         # 相邻两帧可能对应的是同一次按键（比如分别位于切割区域的一左一右）
         if key != last_key or frame_index > last_index + 1:
             @utils.new_thread
-            async def custom_keypress(key, delay1, delay2):
-                await control.delay(delay1)
-                await control.keypress(key, delay2)
-            await custom_keypress(key, 0.28, 0.01)
+            def custom_keypress(key, delay1, delay2):
+                try:
+                    ctrl.delay(delay1)
+                    ctrl.keypress(key, delay2)
+                except control.OperationInterrupt:
+                    stop()
+            custom_keypress(key, 0.28, 0.01)
             print(f'{frame_index:08d}\t{utils.time2str(timestamp)}\t\t{key}\t{num}')
 
             ack_index = frame_index
@@ -190,11 +192,7 @@ async def keypress_async_func(map_top, map_middle, map_bottom):
             last_key = key
 
 
-def keypress_thread_func(map_top, map_middle, map_bottom):
-    asyncio.run(keypress_async_func(map_top, map_middle, map_bottom))
-
-
-def start():
+def start(ctrl):
     global is_running
     if is_running:
         print('[ERROR] 脚本不支持并发运行')
@@ -215,7 +213,7 @@ def start():
         recognize_thread.start()
 
     # 按键线程
-    keypress_thread = threading.Thread(target=keypress_thread_func, args=(param.map_top, param.map_middle, param.map_bottom,))
+    keypress_thread = threading.Thread(target=keypress_thread_func, args=(ctrl, param.map_top, param.map_middle, param.map_bottom,))
     keypress_thread.daemon = True
     keypress_thread.start()
 
@@ -228,8 +226,11 @@ def start():
 
 def stop():
     global is_running
+    if is_running:
+        print('中止【通用】演奏')
     is_running = False
 
 
 if __name__ == '__main__':
-    start()
+    ctrl = control.Control(param.process_name)
+    start(ctrl)

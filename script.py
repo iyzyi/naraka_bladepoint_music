@@ -1,122 +1,115 @@
-import asyncio, time
+import time, threading
 from functools import partial
-
+import keyboard
 import config
+import control
+import param
 from control import *
 import utils
-import keyboard
 
 
 is_running = False
-tasks = {}
-for type in config.bind_keys.keys():
-    tasks[type] = None
+task_ctrls = {}
+index = 0
+lock = threading.Lock()
 
 
 def bind_hotkey():
     @utils.new_thread
     def func():
-        for type in config.bind_keys.keys():
-            keyboard.add_hotkey(config.bind_keys[type]['start'], partial(start_script, type))
-            keyboard.add_hotkey(config.bind_keys[type]['stop'], partial(stop_script, type))
+        for type in param.type_handles.keys():
+            keyboard.add_hotkey(config.bind_keys[type], partial(start_script, type))
+        keyboard.add_hotkey(config.bind_keys['结束'], partial(stop_script))
         keyboard.wait()
     func()
 
 
 def start_script(type):
-    print(f'快捷键: {config.bind_keys[type]["start"]}\t开始【{type}】演奏')
-
     global is_running
+    global index
+
     if is_running:
         print('[ERROR] 脚本不支持并发运行')
         return
     is_running = True
 
-    async def async_func(type):
-        loop = asyncio.get_event_loop()
-        task = loop.run_until_complete(script_body(type))
-        tasks[type] = task
+    lock.acquire()
 
-        # @utils.new_thread
-        # def f(type):
-        #     time.sleep(2)
-        #     tasks[type].cancel()
-        # #f(type)
+    ctrl = control.Control(param.process_name)
+    task_ctrls[index] = ctrl
 
-        # await asyncio.sleep(2)
-        # task.cancel()
-
-        try:
-            await task
-            print('执行完成')
-        except asyncio.CancelledError:
-            print('执行终止')
+    print(f'开始【{type}】演奏')
 
     @utils.new_thread
-    def thread_func():
+    def thread_func(index):
         global is_running
-        asyncio.run(async_func(type))
+        try:
+            script_body(ctrl, type)
+            print(f'完成【{type}】演奏')
+        except OperationInterrupt:
+            print(f'中止【{type}】演奏')
+            del task_ctrls[index]
         is_running = False
-        tasks[type] = None
 
-    thread_func()
+    thread_func(index)
+
+    index += 1
+    lock.release()
 
 
-def stop_script(type):
-    print(f'快捷键: {config.bind_keys[type]["stop"]}\t结束【{type}】演奏')
+def stop_script():
+    print('尝试中止所有演奏')
     global is_running
-    if is_running:
-        print('尝试终止')
-        tasks[type].cancel()
-        tasks[type] = None
-        is_running = False
+    for ctrl in task_ctrls.values():
+        ctrl.interrupt()
+    for type in param.type_handles.keys():
+        param.type_handles[type]['stop']()
+    is_running = False
 
 
-async def script_body(type):
-    await asyncio.sleep(5)
+def script_body(ctrl, type):
+    c = ctrl
 
-    # try:
-    #     print("Task started")
-    #     await asyncio.sleep(5)
-    #     print("Task completed")
-    # except asyncio.CancelledError:
-    #     print("Task cancelled")
+    # 长按E 开始演奏
+    c.keypress('E', 1.6)
+    c.delay(4)
 
-    # # 长按E 开始演奏
-    # await keypress('E', 1600)
-    # await delay(4)
-    #
-    # # 演奏几次
-    # times = 2
-    # for i in range(times):
-    #     # 打开 曲艺手册
-    #     await moveto(1818, 241)
-    #     await delay(0.1)
-    #     await left_click()
-    #     await delay(1)
-    #
-    #     # 曲艺手册 翻到最后
-    #     await moveto(996, 710)
-    #     await delay(0.1)
-    #     await mouse_wheel(-300)
-    #     await delay(0.5)
-    #
-    #     # 选择 《专家-天选》
-    #     await moveto(996, 710)
-    #     await delay(0.1)
-    #     await left_click()
-    #
-    #     # 点击 开始演奏
-    #     await moveto(1689, 943)
-    #     await delay(0.1)
-    #     await left_click()
-    #
-    #     # 演奏
-    #
-    #     # 退出
+    # 演奏几次
+    times = 2
+    for i in range(times):
+        # 打开 曲艺手册
+        c.moveto(1818, 241)
+        c.delay(0.1)
+        c.left_click()
+        c.delay(1)
+
+        # 曲艺手册 翻到最后
+        c.moveto(996, 710)
+        c.delay(0.1)
+        c.mouse_wheel(-300)
+        c.delay(0.5)
+
+        # 选择 《专家-天选》
+        c.moveto(996, 710)
+        c.delay(0.1)
+        c.left_click()
+
+        # 点击 开始演奏
+        c.moveto(1689, 943)
+        c.delay(0.1)
+        c.left_click()
+
+        # 演奏 并 等待演奏完成
+        utils.new_thread(param.type_handles[type]['start'])(c)
+        c.delay(3 * 60 + 24)
+
+        # 确认获取熟练度
+        c.delay(3)
+        c.keypress(' ')
+
 
 
 if __name__ == '__main__':
     bind_hotkey()
     while True:
-        asyncio.run(delay(3600))
+        time.sleep(3600)
