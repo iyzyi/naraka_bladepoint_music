@@ -6,7 +6,7 @@ import pytesseract
 import utils
 import control
 import param
-import param_锣
+import param_梆子
 
 
 debug = True
@@ -42,23 +42,17 @@ def crop_and_ocr(image, args, time_str, frame_index):
     white_count = np.count_nonzero(region == 255)
     total_pixels = height * width
     white_ratio = white_count / total_pixels
-    #print(f'type: {type}\twhite_ratio: {white_ratio}')
+    #print(f'index: {frame_index}\ttype: {type}\twhite_ratio: {white_ratio}')
 
     text = ''
-    # OCR速度太慢了，通过这一条件屏蔽大部分无效图像
-    if 0.5 < white_ratio < 0.95:
-        # --psm 7 单行识别
-        # --oem 3 使用 LSTM OCR 引擎
-        # -c tessedit_char_whitelist=0123456789 只识别数字字符
-        text = pytesseract.image_to_string(image, config='--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789')
-        text = text.strip()
 
-        # if debug and temp_dir != '':
-        #     temp = text
-        #     if text == '':
-        #         temp = 'null'
-        #     cv2.imwrite(os.path.join(temp_dir, f'{frame_index}_{time_str}_{type}_{temp}.jpg'), image)
-        #     #cv2.imwrite(os.path.join(temp_dir, f'{frame_index}_{time_str}_{type}_{temp}_ori.jpg'), image_ori)
+    if 0.15 < white_ratio < 0.5:
+        text = '*'
+
+        if debug and temp_dir != '':
+            print(f'index: {frame_index}\ttype: {type}\twhite_ratio: {white_ratio}')
+            cv2.imwrite(os.path.join(temp_dir, f'{frame_index}_{time_str}_{type}.jpg'), image)
+            cv2.imwrite(os.path.join(temp_dir, f'{frame_index}_{time_str}_{type}_ori.jpg'), image_ori)
 
     # 计算图片哈希，用于判定目标区域画面无变化/重复插帧的情况
     image_bytes = cv2.imencode('.jpg', image)[1].tobytes()
@@ -91,9 +85,9 @@ def recognize_thread_func():
         except queue.Empty:
             continue
         time_str = utils.time2str(timestamp)
-        res_top = crop_and_ocr(image, param_锣.args_top, time_str, frame_index)
-        res_middle = crop_and_ocr(image, param_锣.args_middle, time_str, frame_index)
-        res_bottom = crop_and_ocr(image, param_锣.args_bottom, time_str, frame_index)
+        res_top = crop_and_ocr(image, param_梆子.args_top, time_str, frame_index)
+        res_middle = crop_and_ocr(image, param_梆子.args_middle, time_str, frame_index)
+        res_bottom = crop_and_ocr(image, param_梆子.args_bottom, time_str, frame_index)
         result_queue.put((frame_index, timestamp, res_top, res_middle, res_bottom))
 
 
@@ -102,7 +96,6 @@ def keypress_thread_func(ctrl):
     ack_index = -1
     last_index = 0
     last_press_index = 0
-    last_key = ''
     last_hash_top = ''
     last_hash_middle = ''
     last_hash_bottom = ''
@@ -121,42 +114,29 @@ def keypress_thread_func(ctrl):
         if non_null == 0:
             continue
         if non_null != 1:
-            print(f'[WARNING] 多行均识别出非零值: {result}')
+            #print(f'[WARNING] 多行均识别出非零值: {result}')
             continue
 
-        num_top, hash_top = res_top
-        num_middle, hash_middle = res_middle
-        num_bottom, hash_bottom = res_bottom
+        text_top, hash_top = res_top
+        text_middle, hash_middle = res_middle
+        text_bottom, hash_bottom = res_bottom
 
-        num = 0
         skip = False
 
-        if num_top != '':
-            if int(num_top) not in param_锣.map_top.keys():
-                print(f'[WARNING] map_top中没有对应键: {num_top}')
-                continue
-            key = param_锣.map_top[int(num_top)]
-            num = num_top
+        if text_top == '*':
+            key = param_梆子.key_top
             if last_hash_top == hash_top:
                 last_index = frame_index
                 skip = True
             last_hash_top = hash_top
-        elif num_middle != '':
-            if int(num_middle) not in param_锣.map_middle.keys():
-                print(f'[WARNING] map_middle没有对应键: {num_middle}')
-                continue
-            key = param_锣.map_middle[int(num_middle)]
-            num = num_middle
+        elif text_middle == '*':
+            key = param_梆子.key_middle
             if last_hash_middle == hash_middle:
                 last_index = frame_index
                 skip = True
             last_hash_middle = hash_middle
         else:
-            if int(num_bottom) not in param_锣.map_bottom.keys():
-                print(f'[WARNING] map_bottom中没有对应键: {num_bottom}')
-                continue
-            key = param_锣.map_bottom[int(num_bottom)]
-            num = num_bottom
+            key = param_梆子.key_bottom
             if last_hash_bottom == hash_bottom:
                 last_index = frame_index
                 skip = True
@@ -172,12 +152,11 @@ def keypress_thread_func(ctrl):
         # 相邻两帧不要都按下按键，因为第二帧的数字可能会卡在边界导致误识别
         # 比如是同一个按键，第一帧正确识别3，第二帧由于3被卡了一半，识别成1
         # 如果都响应，则会消耗下一次按键的正确机会，造成恶性循环
-        # PS: 锣的按键间隔较大，所以这里改为3试试
-        if frame_index <= last_press_index + 3:#1:
+        if frame_index <= last_press_index + 1:
             continue
 
         # 相邻两帧可能对应的是同一次按键（比如分别位于切割区域的一左一右）
-        if key != last_key or frame_index > last_index + 1:
+        if frame_index > last_index + 1:
             @utils.new_thread
             def custom_keypress(key, delay1, delay2):
                 try:
@@ -185,13 +164,12 @@ def keypress_thread_func(ctrl):
                     ctrl.keypress(key, delay2)
                 except control.OperationInterrupt:
                     stop()
-            custom_keypress(key, 0.28, 0.01)
-            print(f'{frame_index:08d}\t{utils.time2str(timestamp)}\t\t{key}\t{num}')
+            custom_keypress(key, 0.45, 0.01)
+            print(f'{frame_index:08d}\t{utils.time2str(timestamp)}\t\t{key}')
 
             ack_index = frame_index
             last_index = frame_index
             last_press_index = frame_index
-            last_key = key
 
 
 def start(ctrl):
@@ -231,7 +209,7 @@ def start(ctrl):
 def stop():
     global is_running
     if is_running:
-        print('中止【锣】演奏')
+        print('中止【梆子】演奏')
     is_running = False
 
 
