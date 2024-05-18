@@ -91,7 +91,7 @@ def recognize_thread_func():
         result_queue.put((frame_index, timestamp, res_top, res_middle, res_bottom))
 
 
-def keypress_thread_func(ctrl):
+def keypress_thread_func(ctrl, mode):
     global result_list
     ack_index = -1
     last_index = 0
@@ -163,7 +163,7 @@ def keypress_thread_func(ctrl):
                     ctrl.delay(delay1)
                     ctrl.keypress(key, delay2)
                 except control.OperationInterrupt:
-                    stop()
+                    stop(mode)
             custom_keypress(key, 0.45, 0.01)
             print(f'{frame_index:08d}\t{utils.time2str(timestamp)}\t\t{key}')
 
@@ -172,7 +172,7 @@ def keypress_thread_func(ctrl):
             last_press_index = frame_index
 
 
-def start(ctrl):
+def start(ctrl, mode):
     global is_running
     if is_running:
         print('[ERROR] 脚本不支持并发运行')
@@ -193,7 +193,7 @@ def start(ctrl):
         recognize_thread.start()
 
     # 按键线程
-    keypress_thread = threading.Thread(target=keypress_thread_func, args=(ctrl,))
+    keypress_thread = threading.Thread(target=keypress_thread_func, args=(ctrl, mode,))
     keypress_thread.daemon = True
     keypress_thread.start()
 
@@ -206,10 +206,10 @@ def start(ctrl):
     is_running = False
 
 
-def stop():
+def stop(mode):
     global is_running
     if is_running:
-        print('中止【梆子】演奏')
+        print(f'[{mode}模式] 中止【梆子】演奏')
     is_running = False
 
 

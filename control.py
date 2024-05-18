@@ -70,10 +70,8 @@ class Control:
 if __name__ == '__main__':
     import param
     c = Control(param.process_name)
-    # c.keypress("E")
-    # c.delay(1)
-    # c.interrupt()
-    # c.keypress("F")
-    # c.delay(3600)
-    c.mouse_wheel(120)
+    c.keypress("E")
     c.delay(1)
+    c.interrupt()
+    c.keypress("F")
+    c.delay(3600)

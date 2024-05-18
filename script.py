@@ -1,11 +1,8 @@
 import time, threading
-from functools import partial
-import keyboard
-import config
-import control
-import param
 from control import *
 import utils
+import script
+import param
 
 
 is_running = False
@@ -14,17 +11,7 @@ index = 0
 lock = threading.Lock()
 
 
-def bind_hotkey():
-    @utils.new_thread
-    def func():
-        for type in param.type_handles.keys():
-            keyboard.add_hotkey(config.bind_keys[type], partial(start_script, type))
-        keyboard.add_hotkey(config.bind_keys['结束'], partial(stop_script))
-        keyboard.wait()
-    func()
-
-
-def start_script(type):
+def start_script(mode, type):
     global is_running
     global index
 
@@ -35,44 +22,54 @@ def start_script(type):
 
     lock.acquire()
 
-    ctrl = control.Control(param.process_name)
+    ctrl = Control(param.process_name)
     task_ctrls[index] = ctrl
 
-    print(f'开始【{type}】演奏')
+    print(f'[{mode}模式] 开始【{type}】演奏')
 
     @utils.new_thread
-    def thread_func(index):
+    def loop_thread_func(index):
         global is_running
         try:
-            script_body(ctrl, type)
-            print(f'完成【{type}】演奏')
+            script.loop_script_body(ctrl, mode, type)
+            print(f'[{mode}模式] 完成【{type}】演奏')
         except OperationInterrupt:
-            print(f'中止【{type}】演奏')
+            print(f'[{mode}模式] 中止【{type}】演奏')
             del task_ctrls[index]
         is_running = False
 
-    thread_func(index)
+    @utils.new_thread
+    def scan_thread_func(index):
+        global is_running
+        param.type_handles[type]['start'](ctrl, mode)
+        del task_ctrls[index]
+        is_running = False
+
+    if mode == '循环':
+        loop_thread_func(index)
+    else:
+        scan_thread_func(index)
 
     index += 1
     lock.release()
 
 
-def stop_script():
-    print('尝试中止所有演奏')
+def stop_script(mode):
+    print('尝试中止所有演奏操作')
     global is_running
     for ctrl in task_ctrls.values():
         ctrl.interrupt()
     for type in param.type_handles.keys():
-        param.type_handles[type]['stop']()
+        param.type_handles[type]['stop'](mode)
     is_running = False
 
 
-def script_body(ctrl, type):
+def loop_script_body(ctrl, mode, type):
     c = ctrl
 
     while is_running:
         # 长按E 开始演奏 (可能会有bug，多重复几次吧)
-        for i in range(12):
+        for i in range(10):
             c.keypress('E', 2)
         #c.delay(4)
 
@@ -102,7 +99,7 @@ def script_body(ctrl, type):
             c.left_click()
 
             # 演奏 并 等待演奏完成
-            utils.new_thread(param.type_handles[type]['start'])(c)
+            utils.new_thread(param.type_handles[type]['start'])(ctrl, mode)
             # 乐曲时长
             c.delay(3 * 60 + 24)
             c.delay(12)
@@ -123,10 +120,3 @@ def script_body(ctrl, type):
         # 小跳一下 (为了屏幕中显示 E 键)
         c.keypress(' ')
         c.delay(0.5)
-
-
-
-if __name__ == '__main__':
-    bind_hotkey()
-    while True:
-        time.sleep(3600)
