@@ -5,6 +5,7 @@ import pyautogui
 import pytesseract
 import utils
 import control
+import script
 import param
 import param_疆鼓
 
@@ -92,7 +93,7 @@ def recognize_thread_func():
         result_queue.put((frame_index, timestamp, res_line1, res_line2, res_line3, res_line4))
 
 
-def keypress_thread_func(ctrl, mode):
+def keypress_thread_func(ctrl):
     global result_list
     ack_index = -1
     last_index = 0
@@ -180,7 +181,7 @@ def keypress_thread_func(ctrl, mode):
             last_press_index = frame_index
 
 
-def start(ctrl, mode):
+def start(ctrl):
     global is_running
     if is_running:
         print('[ERROR] 脚本不支持并发运行')
@@ -201,7 +202,7 @@ def start(ctrl, mode):
         recognize_thread.start()
 
     # 按键线程
-    keypress_thread = threading.Thread(target=keypress_thread_func, args=(ctrl, mode,))
+    keypress_thread = threading.Thread(target=keypress_thread_func, args=(ctrl,))
     keypress_thread.daemon = True
     keypress_thread.start()
 
@@ -214,10 +215,10 @@ def start(ctrl, mode):
     is_running = False
 
 
-def stop(mode):
+def stop():
     global is_running
     if is_running:
-        print(f'[{mode}模式] 中止【疆鼓】演奏')
+        print(f'[{script.g_mode}模式] 中止【疆鼓】演奏')
     is_running = False
 
 

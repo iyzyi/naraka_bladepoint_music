@@ -6,6 +6,7 @@ import param
 
 
 is_running = False
+g_mode = ''
 task_ctrls = {}
 index = 0
 lock = threading.Lock()
@@ -14,6 +15,7 @@ lock = threading.Lock()
 def start_script(mode, type):
     global is_running
     global index
+    global g_mode
 
     if is_running:
         print('[ERROR] 脚本不支持并发运行')
@@ -26,6 +28,7 @@ def start_script(mode, type):
     task_ctrls[index] = ctrl
 
     print(f'[{mode}模式] 开始【{type}】演奏')
+    g_mode = mode
 
     @utils.new_thread
     def loop_thread_func(index):
@@ -41,7 +44,7 @@ def start_script(mode, type):
     @utils.new_thread
     def scan_thread_func(index):
         global is_running
-        param.type_handles[type]['start'](ctrl, mode)
+        param.type_handles[type]['start'](ctrl)
         del task_ctrls[index]
         is_running = False
 
@@ -54,14 +57,16 @@ def start_script(mode, type):
     lock.release()
 
 
-def stop_script(mode):
+def stop_script():
     print('尝试中止所有演奏操作')
     global is_running
+    global g_mode
     for ctrl in task_ctrls.values():
         ctrl.interrupt()
     for type in param.type_handles.keys():
-        param.type_handles[type]['stop'](mode)
+        param.type_handles[type]['stop']()
     is_running = False
+    g_mode = ''
 
 
 def loop_script_body(ctrl, mode, type):
@@ -69,7 +74,7 @@ def loop_script_body(ctrl, mode, type):
 
     while is_running:
         # 长按E 开始演奏 (可能会有bug，多重复几次吧)
-        for i in range(10):
+        for i in range(8):
             c.keypress('E', 2)
         #c.delay(4)
 
@@ -99,7 +104,7 @@ def loop_script_body(ctrl, mode, type):
             c.left_click()
 
             # 演奏 并 等待演奏完成
-            utils.new_thread(param.type_handles[type]['start'])(ctrl, mode)
+            utils.new_thread(param.type_handles[type]['start'])(ctrl)
             # 乐曲时长
             c.delay(3 * 60 + 24)
             c.delay(12)
