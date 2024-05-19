@@ -120,7 +120,7 @@ def loop_script_body(ctrl, mode, type):
         c.delay(3)
         # 确认获取熟练度窗口，有时这里也会出现
         c.keypress(' ')
-        c.delay(5)
+        c.delay(3)
 
         # 小跳一下 (为了屏幕中显示 E 键)
         c.keypress(' ')
