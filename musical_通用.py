@@ -12,7 +12,8 @@ import param_通用
 
 debug = True
 temp_dir = r'D:\temp'
-shutil.rmtree(temp_dir)
+if os.path.exists(temp_dir):
+    shutil.rmtree(temp_dir)
 os.makedirs(temp_dir)
 
 images_queue = queue.Queue()
