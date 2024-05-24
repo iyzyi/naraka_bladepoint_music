@@ -2,6 +2,8 @@ import time
 import win32api, win32con, win32gui
 import mouse_focus
 
+default_delay = 0.01
+
 
 class OperationInterrupt(Exception):
     pass
@@ -37,7 +39,7 @@ class Control:
         time.sleep(seconds)
 
     @on_mouse_focus
-    def keypress(self, key, delay_seconds=0.01):
+    def keypress(self, key, delay_seconds=default_delay):
         # key实际上应为VK_CODE
         # https://learn.microsoft.com/zh-cn/windows/win32/inputdev/virtual-key-codes
         assert isinstance(key, int) or isinstance(key, str)
@@ -45,6 +47,20 @@ class Control:
             key = ord(key)
         win32api.keybd_event(key, win32api.MapVirtualKey(key, 0), 0, 0)
         self.delay(delay_seconds)
+        win32api.keybd_event(key, win32api.MapVirtualKey(key, 0), win32con.KEYEVENTF_KEYUP, 0)
+
+    @on_mouse_focus
+    def keydown(self, key):
+        assert isinstance(key, int) or isinstance(key, str)
+        if isinstance(key, str):
+            key = ord(key)
+        win32api.keybd_event(key, win32api.MapVirtualKey(key, 0), 0, 0)
+
+    @on_mouse_focus
+    def keyup(self, key):
+        assert isinstance(key, int) or isinstance(key, str)
+        if isinstance(key, str):
+            key = ord(key)
         win32api.keybd_event(key, win32api.MapVirtualKey(key, 0), win32con.KEYEVENTF_KEYUP, 0)
 
     @on_mouse_focus
