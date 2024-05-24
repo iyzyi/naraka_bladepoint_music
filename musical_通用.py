@@ -22,8 +22,8 @@ result_queue = queue.Queue()
 is_running = False
 queue_get_timeout = 1
 
-long_press_image = cv2.imread(r'image\long_press.jpg')
-button_right_image = cv2.imread(r'd:\Snipaste_2024-05-24_17-43-34.jpg')
+long_press_image = cv2.imread(r'images\long_press.jpg')
+button_right_image = cv2.imread(r'images\button_right.jpg')
 long_press_image_height, long_press_image_width = long_press_image.shape[:-1]
 button_right_image_height, button_right_image_width = button_right_image.shape[:-1]
 
@@ -203,11 +203,10 @@ def keypress_thread_func(ctrl):
         if not (key != last_key or frame_index > last_index + 1):
             continue
 
-        # 判断是否需要长按、计算长按时间
-        def calc_long_press_delay(image, long_args):
-            if config.long_press_k == 0:
-                return control.default_delay
+        # 判断是否需要长按按键
+        def judge_long_press(image, long_args):
 
+            # 在image中搜索是否包含target，返回按x排序的(x, y)列表
             def image_search(image, target):
                 # 搜图
                 res = cv2.matchTemplate(image, target, cv2.TM_CCOEFF_NORMED)
@@ -228,7 +227,10 @@ def keypress_thread_func(ctrl):
                 coords = sorted(temp, key=lambda pair: pair[0])
                 return coords
 
-            def calc_long_press_pixels(long_press_coords, button_right_coords):
+            # 需要长按按键的情况的充要条件：
+            # 1) 最左边的那个long_press图像 在 最左边的那个button_right图像的右边，且二者之间没有其他的button_right图像
+            # 2) 最左边的那个button_right的x坐标不超过一定阈值
+            def judge(long_press_coords, button_right_coords):
                 index = 1
                 for coord in button_right_coords:
                     if coord[0] < long_press_coords[0][0]:
@@ -236,9 +238,8 @@ def keypress_thread_func(ctrl):
                 if index == 2:
                     threshold = button_right_image_height
                     if button_right_coords[0][0] < threshold:
-                        return 2 * (long_press_coords[0][0] + long_press_image_width // 2 -
-                                    (button_right_coords[0][0] + button_right_image_width))
-                return 0
+                        return True
+                return False
 
             # 裁剪特定区域
             x, y, width, height = long_args
@@ -255,18 +256,11 @@ def keypress_thread_func(ctrl):
             # print(button_right_coords)
 
             if len(long_press_coords) > 0 and len(button_right_coords) > 0:
-                pixels = calc_long_press_pixels(long_press_coords, button_right_coords)
-                if pixels != 0:
-                    # if debug and temp_dir != '':
-                    #     cv2.imwrite(os.path.join(temp_dir, f'{frame_index}_long_{pixels}.jpg'), image)\
-
-                    #delay = pixels * (config.keypress_delay['通用'] / param_通用.pixels)
-                    # 不能直接像上面那样直接按比例转换像素对应的时间，因为 param_通用.pixels 中有一部分像素对应的时间消耗在处理、识别图像上
-                    delay = pixels * (config.keypress_delay['通用'] / param_通用.pixels) * config.long_press_k
-                    return delay
-
-            # 正常按下按键，不长按
-            return control.default_delay
+                result = judge(long_press_coords, button_right_coords)
+                # if result and debug and temp_dir != '':
+                #     cv2.imwrite(os.path.join(temp_dir, f'{frame_index}_long.jpg'), image)
+                return result
+            return False
 
         @utils.new_thread
         def custom_keypress(key, delay1, delay2):
@@ -293,27 +287,18 @@ def keypress_thread_func(ctrl):
                 stop()
 
         if num_top != '':
-            delay = calc_long_press_delay(image, param_通用.long_top)
+            judge_down = judge_long_press(image, param_通用.long_top)
             judge_up = key == last_key_top and on_keydown_top
         elif num_middle != '':
-            delay = calc_long_press_delay(image, param_通用.long_middle)
+            judge_down = judge_long_press(image, param_通用.long_middle)
             judge_up = key == last_key_middle and on_keydown_middle
         else:
-            delay = calc_long_press_delay(image, param_通用.long_bottom)
+            judge_down = judge_long_press(image, param_通用.long_bottom)
             judge_up = key == last_key_bottom and on_keydown_bottom
 
-        if delay != control.default_delay:
-            custom_keydown(key, config.keypress_delay['通用'])
-            if num_top != '':
-                on_keydown_top = True
-            elif num_middle != '':
-                on_keydown_middle = True
-            else:
-                on_keydown_bottom = True
-            type = 'D'
-
-        elif judge_up:
-            custom_keyup(key, config.keypress_delay['通用'])
+        # 长按-up
+        if judge_up:
+            custom_keyup(key, config.key_delay['通用'])
             if num_top != '':
                 on_keydown_top = False
             elif num_middle != '':
@@ -323,8 +308,35 @@ def keypress_thread_func(ctrl):
             type = 'P'
 
         else:
-            custom_keypress(key, config.keypress_delay['通用'], 0.01)
-            type = 'U'
+            # 万一没识别到up的那个键，则在下一次之前，先up上一次的长按按键
+            if num_top != '' and on_keydown_top:
+                if on_keydown_top:
+                    custom_keyup(last_key_top, config.key_delay['通用'])
+                on_keydown_top = False
+            elif num_middle != '':
+                if on_keydown_middle:
+                    custom_keyup(last_key_middle, config.key_delay['通用'])
+                on_keydown_middle = False
+            else:
+                if on_keydown_bottom:
+                    custom_keyup(last_key_bottom, config.key_delay['通用'])
+                on_keydown_bottom = False
+
+            # 长按-down
+            if judge_down:
+                custom_keydown(key, config.key_delay['通用'])
+                if num_top != '':
+                    on_keydown_top = True
+                elif num_middle != '':
+                    on_keydown_middle = True
+                else:
+                    on_keydown_bottom = True
+                type = 'D'
+
+            # 正常按键
+            else:
+                custom_keypress(key, config.key_delay['通用'], 0.01)
+                type = 'U'
 
         print(f'{frame_index:08d}\t{utils.time2str(timestamp)}\t\t[{type}]\t{key}\t{num}')
 

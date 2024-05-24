@@ -191,7 +191,7 @@ def keypress_thread_func(ctrl):
                     ctrl.keypress(key, delay2)
                 except control.OperationInterrupt:
                     stop()
-            custom_keypress(key, config.keypress_delay['锣'], 0.01)
+            custom_keypress(key, config.key_delay['锣'], 0.01)
             print(f'{frame_index:08d}\t{utils.time2str(timestamp)}\t\t{key}\t{num}')
 
             ack_index = frame_index
