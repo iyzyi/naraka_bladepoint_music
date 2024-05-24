@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import pyautogui
 import pytesseract
+import config
 import utils
 import control
 import script
@@ -76,12 +77,14 @@ def screenshot_thread_func():
     while is_running:
         begin = time.time()
         screenshot = pyautogui.screenshot()
-        image = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
+        image = screenshot#cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
         images_queue.put((frame_index, begin, image))
         frame_index += 1
         end = time.time()
         if (end - begin) < frame_interval:
             time.sleep(frame_interval - (end - begin))
+        else:
+            print('[WARNING] 无法满足所需帧数，可能会导致按键识别延迟')
 
 
 def recognize_thread_func():
@@ -92,6 +95,7 @@ def recognize_thread_func():
             frame_index, timestamp, image = images_queue.get(timeout=queue_get_timeout)
         except queue.Empty:
             continue
+        image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         time_str = utils.time2str(timestamp)
         res_top = crop_and_ocr(image, param_锣.args_top, time_str, frame_index)
         res_middle = crop_and_ocr(image, param_锣.args_middle, time_str, frame_index)
@@ -187,7 +191,7 @@ def keypress_thread_func(ctrl):
                     ctrl.keypress(key, delay2)
                 except control.OperationInterrupt:
                     stop()
-            custom_keypress(key, 0.28, 0.01)
+            custom_keypress(key, config.keypress_delay['锣'], 0.01)
             print(f'{frame_index:08d}\t{utils.time2str(timestamp)}\t\t{key}\t{num}')
 
             ack_index = frame_index
