@@ -6,6 +6,7 @@ import console
 def app():
     root = tk.Tk()
     root.title("永劫无间 乐器熟练度速刷")
+    root.iconbitmap("顾清寒.ico")
     root.geometry("312x400")
 
     font_bold = font.Font(family="微软雅黑", size=14, weight="bold")
