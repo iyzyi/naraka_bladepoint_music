@@ -6,3 +6,4 @@
 /dist
 main.spec
 
+*.exe
