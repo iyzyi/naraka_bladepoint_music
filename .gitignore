@@ -1,4 +1,8 @@
 *.mp4
-*.pickle
 /.idea/
 /__pycache__/
+/Tesseract-OCR
+/build
+/dist
+main.spec
+

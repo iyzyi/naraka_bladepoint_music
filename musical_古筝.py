@@ -2,7 +2,6 @@ import os, time, shutil, hashlib, threading, queue
 import cv2
 import numpy as np
 import pyautogui
-import pytesseract
 import config
 import utils
 import control
@@ -50,11 +49,7 @@ def crop_and_ocr(image, args, time_str, frame_index):
     text = ''
     # OCR速度太慢了，通过这一条件屏蔽大部分无效图像
     if 0.5 < white_ratio < 0.95:
-        # --psm 7 单行识别
-        # --oem 3 使用 LSTM OCR 引擎
-        # -c tessedit_char_whitelist=0123456789 只识别数字字符
-        text = pytesseract.image_to_string(image, config='--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789')
-        text = text.strip()
+        text = utils.OCR(image)
 
         # if debug and temp_dir != '':
         #     temp = text

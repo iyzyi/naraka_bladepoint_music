@@ -26,4 +26,6 @@ bind_keys = {
 
 
 import yaml
-key_delay = yaml.load(open('config.yaml', encoding='utf-8').read(), Loader=yaml.FullLoader)
+data = yaml.load(open('config.yaml', encoding='utf-8').read(), Loader=yaml.FullLoader)
+key_delay = data['key_delay']
+tesseract_path = data['tesseract_path']

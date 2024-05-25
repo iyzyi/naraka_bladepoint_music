@@ -2,7 +2,6 @@ import os, time, shutil, hashlib, threading, queue
 import cv2
 import numpy as np
 import pyautogui
-import pytesseract
 import config
 import utils
 import control
