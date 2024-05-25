@@ -305,7 +305,7 @@ def keypress_thread_func(ctrl):
                 on_keydown_middle = False
             else:
                 on_keydown_bottom = False
-            type = 'P'
+            type = 'U'
 
         else:
             # 万一没识别到up的那个键，则在下一次之前，先up上一次的长按按键
@@ -336,7 +336,7 @@ def keypress_thread_func(ctrl):
             # 正常按键
             else:
                 custom_keypress(key, config.key_delay['通用'], 0.01)
-                type = 'U'
+                type = 'P'
 
         print(f'{frame_index:08d}\t{utils.time2str(timestamp)}\t\t[{type}]\t{key}\t{num}')
 

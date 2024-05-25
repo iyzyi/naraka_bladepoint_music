@@ -1,31 +1,32 @@
-import time
-from functools import partial
-import keyboard
-import script
+import tkinter as tk
+from tkinter import font
 import config
-import param
-import utils
+import console
 
+def app():
+    root = tk.Tk()
+    root.title("永劫无间 乐器熟练度速刷")
+    root.geometry("312x400")
 
-def bind_hotkey():
-    @utils.new_thread
-    def func():
-        for mode in ['循环', '扫描']:
-            for type in param.type_handles.keys():
-                keyboard.add_hotkey(config.bind_keys[f'{mode}-{type}'], partial(script.start_script, mode, type))
-        keyboard.add_hotkey(config.bind_keys['结束'], script.stop_script)
-        keyboard.wait()
-    func()
+    font_bold = font.Font(family="微软雅黑", size=14, weight="bold")
+    font_default = font.Font(family="微软雅黑", size=14)
+
+    tk.Label(root, text='快捷键', font=font_bold).grid(row=0, column=0)
+    tk.Label(root, text='功能', font=font_bold).grid(row=0, column=1)
+
+    index = 1
+    for func, key in config.bind_keys.items():
+        left = tk.Label(root, text=key, font=font_default)
+        left.grid(row=index, column=0, padx=60, pady=1)
+        right = tk.Label(root, text=func, font=font_default)
+        right.grid(row=index, column=1, padx=10, pady=1)
+        index += 1
+
+    console.bind_hotkey()
+
+    root.mainloop()
+
 
 
 if __name__ == '__main__':
-    print('欢迎使用永劫无间乐器熟练度速刷脚本\n')
-    print('快捷键\t\t功能')
-    for k, v in config.bind_keys.items():
-        print(f'{v}\t\t{k}')
-    print()
-
-    bind_hotkey()
-
-    while True:
-        time.sleep(3600)
+    app()
