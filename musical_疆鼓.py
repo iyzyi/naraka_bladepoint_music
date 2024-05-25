@@ -10,11 +10,11 @@ import param
 import param_疆鼓
 
 
-debug = True
+debug = False
 temp_dir = r'D:\temp'
-if os.path.exists(temp_dir):
+if debug and os.path.exists(temp_dir):
     shutil.rmtree(temp_dir)
-os.makedirs(temp_dir)
+    os.makedirs(temp_dir)
 
 images_queue = queue.Queue()
 result_queue = queue.Queue()

@@ -1,6 +1,4 @@
 # 绑定按键
-import os.path
-
 bind_keys = {
     '扫描-古筝':    'f3',
     '扫描-通用':    'f4',  # 二胡、曲笛、唢呐
@@ -27,8 +25,20 @@ bind_keys = {
 # 演奏两次后退出，然后重复以上流程。
 
 
+
 import yaml
-data = yaml.load(open('config.yaml', encoding='utf-8').read(), Loader=yaml.FullLoader)
-key_delay = data['key_delay']
-tesseract_path = data['tesseract_path']
-assert os.path.exists(tesseract_path)
+import os
+
+key_delay = {}
+tesseract_path = ''
+
+def load_config_yaml():
+
+    global key_delay
+    global tesseract_path
+    data = yaml.load(open('config.yaml', encoding='utf-8').read(), Loader=yaml.FullLoader)
+    key_delay = data['key_delay']
+    tesseract_path = data['tesseract_path']
+    assert os.path.exists(tesseract_path)
+
+load_config_yaml()
