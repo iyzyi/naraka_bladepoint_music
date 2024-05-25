@@ -1,4 +1,6 @@
 # 绑定按键
+import os.path
+
 bind_keys = {
     '扫描-古筝':    'f3',
     '扫描-通用':    'f4',  # 二胡、曲笛、唢呐
@@ -29,3 +31,4 @@ import yaml
 data = yaml.load(open('config.yaml', encoding='utf-8').read(), Loader=yaml.FullLoader)
 key_delay = data['key_delay']
 tesseract_path = data['tesseract_path']
+assert os.path.exists(tesseract_path)

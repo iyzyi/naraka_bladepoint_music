@@ -21,8 +21,12 @@ result_queue = queue.Queue()
 is_running = False
 queue_get_timeout = 1
 
-long_press_image = cv2.imread(r'images\long_press.jpg')
-button_right_image = cv2.imread(r'images\button_right.jpg')
+long_press_image_path = r'images\long_press.jpg'
+assert os.path.exists(long_press_image_path)
+long_press_image = cv2.imread(long_press_image_path)
+button_right_image_path = r'images\button_right.jpg'
+assert os.path.exists(button_right_image_path)
+button_right_image = cv2.imread(button_right_image_path)
 long_press_image_height, long_press_image_width = long_press_image.shape[:-1]
 button_right_image_height, button_right_image_width = button_right_image.shape[:-1]
 
