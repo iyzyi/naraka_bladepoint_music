@@ -205,26 +205,7 @@ def keypress_thread_func(ctrl):
         # 判断是否需要长按按键
         def judge_long_press(image, long_args):
 
-            # 在image中搜索是否包含target，返回按x排序的(x, y)列表
-            def image_search(image, target):
-                # 搜图
-                res = cv2.matchTemplate(image, target, cv2.TM_CCOEFF_NORMED)
-                threshold = 0.8
-                loc = np.where(res >= threshold)
-                coords = [coord for coord in zip(*loc[::-1])]
 
-                # 去重
-                temp = []
-                threshold = 10
-                for coord in coords:
-                    exists = False
-                    for coord2 in temp:
-                        if abs(coord[0] - coord2[0]) <= threshold and abs(coord[1] - coord2[1]) <= threshold:
-                            exists = True
-                    if not exists:
-                        temp.append(coord)
-                coords = sorted(temp, key=lambda pair: pair[0])
-                return coords
 
             # 需要长按按键的情况的充要条件：
             # 1) 最左边的那个long_press图像 在 最左边的那个button_right图像的右边，且二者之间没有其他的button_right图像
@@ -244,12 +225,12 @@ def keypress_thread_func(ctrl):
             x, y, width, height = long_args
             image = image[y:y + height, x:x + width]
 
-            long_press_coords = image_search(image, long_press_image)
+            long_press_coords = utils.image_search(image, long_press_image)
             # for coord in long_press_coords:
             #     cv2.rectangle(image, coord, (coord[0] + long_press_image_width, coord[1] + long_press_image_width), (0, 0, 255), 2)
             # print(long_press_coords)
 
-            button_right_coords = image_search(image, button_right_image)
+            button_right_coords = utils.image_search(image, button_right_image)
             # for coord in button_right_coords:
             #     cv2.rectangle(image, coord, (coord[0] + button_right_image_width, coord[1] + button_right_image_height), (0, 0, 255), 2)
             # print(button_right_coords)
