@@ -100,6 +100,8 @@ def recognize_thread_func():
         except queue.Empty:
             continue
         image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        if not utils.is_music_ui(image):
+            continue
         time_str = utils.time2str(timestamp)
         res_top = crop_and_ocr(image, param_通用.args_top, time_str, frame_index)
         res_middle = crop_and_ocr(image, param_通用.args_middle, time_str, frame_index)
