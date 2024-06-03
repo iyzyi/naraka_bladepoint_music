@@ -5,7 +5,7 @@ key_delay:
   梆子: 0.32
   疆鼓: 0.49
   通用: 0.26
-  锣: 0.28
+  锣: 0.33
 
 tesseract_path:
   Tesseract-OCR\tesseract.exe

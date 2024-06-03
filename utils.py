@@ -55,6 +55,8 @@ def image_search(image, target):
 
 
 def is_music_ui(image):
+    x1 = 17; y1 = 261; x2 = 84; y2 = 305
+    image = image[y1:y2, x1:x2]
     res = image_search(image, music_ui_image)
     return len(res) > 0
 
