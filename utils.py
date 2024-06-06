@@ -1,5 +1,6 @@
 import time, threading, os
 import pytesseract
+import pyautogui
 import cv2
 import numpy as np
 import config
@@ -8,6 +9,10 @@ import config
 music_ui_image_path = r'images\perfect.jpg'
 assert os.path.exists(music_ui_image_path)
 music_ui_image = cv2.imread(music_ui_image_path)
+
+music_book_image_path = r'images\music_book.jpg'
+assert os.path.exists(music_book_image_path)
+music_book_image = cv2.imread(music_book_image_path)
 
 
 def new_thread(func):
@@ -59,6 +64,16 @@ def is_music_ui(image):
     image = image[y1:y2, x1:x2]
     res = image_search(image, music_ui_image)
     return len(res) > 0
+
+
+def find_music_book():
+    screenshot = pyautogui.screenshot()
+    image = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
+    x1 = 1773; y1 = 322; x2 = 1837; y2 = 392
+    image = image[y1:y2, x1:x2]
+    res = image_search(image, music_book_image)
+    return len(res) > 0
+
 
 
 if __name__ == '__main__':

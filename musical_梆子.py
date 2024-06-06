@@ -12,8 +12,9 @@ import param_梆子
 
 debug = False
 temp_dir = r'D:\temp'
-if debug and os.path.exists(temp_dir):
-    shutil.rmtree(temp_dir)
+if debug:
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
     os.makedirs(temp_dir)
 
 images_queue = queue.Queue()
@@ -48,7 +49,7 @@ def crop_and_ocr(image, args, time_str, frame_index):
 
     text = ''
 
-    if 0.15 < white_ratio < 0.5:
+    if (type != "middle" and 0.1 < white_ratio < 0.5) or (type == "middle" and 0.3 < white_ratio < 0.8):
         text = '*'
 
         # if debug and temp_dir != '':
@@ -182,7 +183,7 @@ def keypress_thread_func(ctrl):
 def start(ctrl):
     global is_running
     if is_running:
-        print('[ERROR] 脚本不支持并发运行')
+        print('[ERROR] 脚本不支持并发运行*')
         return
     is_running = True
 
@@ -216,7 +217,7 @@ def start(ctrl):
 def stop():
     global is_running
     if is_running:
-        print(f'[{script.g_mode}模式] 中止【梆子】演奏')
+        print('中止【梆子】演奏扫描')
     is_running = False
 
 

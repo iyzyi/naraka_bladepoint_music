@@ -12,8 +12,9 @@ import param_锣
 
 debug = False
 temp_dir = r'D:\temp'
-if debug and os.path.exists(temp_dir):
-    shutil.rmtree(temp_dir)
+if debug:
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
     os.makedirs(temp_dir)
 
 images_queue = queue.Queue()
@@ -200,7 +201,7 @@ def keypress_thread_func(ctrl):
 def start(ctrl):
     global is_running
     if is_running:
-        print('[ERROR] 脚本不支持并发运行')
+        print('[ERROR] 脚本不支持并发运行*')
         return
     is_running = True
 
@@ -234,7 +235,7 @@ def start(ctrl):
 def stop():
     global is_running
     if is_running:
-        print(f'[{script.g_mode}模式] 中止【锣】演奏')
+        print('中止【锣】演奏扫描')
     is_running = False
 
 

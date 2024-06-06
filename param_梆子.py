@@ -1,5 +1,5 @@
 x = 538 + 120
-width = 28 - 10
+width = 28 - 5
 height = 23
 
 args_top = (x, 145, width, height, 'top')
